@@ -1,0 +1,29 @@
+plugins {
+  id 'com.android.library'
+  id 'expo-module-gradle-plugin'
+}
+
+group = 'io.github.merlinlcb.fossfitness'
+version = '1.0.0'
+
+android {
+  namespace "expo.modules.labelocr"
+  defaultConfig {
+    versionCode 1
+    versionName '1.0.0'
+  }
+  // The trained model is already compressed; storing it as-is lets Tesseract copy it quickly.
+  androidResources {
+    noCompress 'traineddata'
+  }
+}
+
+repositories {
+  // Tesseract4Android (Apache-2.0) is published on JitPack, built from https://github.com/adaptech-cz/Tesseract4Android
+  maven { url 'https://jitpack.io' }
+}
+
+dependencies {
+  implementation 'cz.adaptech.tesseract4android:tesseract4android:4.9.0'
+  implementation 'androidx.exifinterface:exifinterface:1.3.7'
+}

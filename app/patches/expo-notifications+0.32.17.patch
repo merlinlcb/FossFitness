@@ -1,0 +1,322 @@
+diff --git a/node_modules/expo-notifications/android/build.gradle b/node_modules/expo-notifications/android/build.gradle
+index 7db47bd..765b0b2 100644
+--- a/node_modules/expo-notifications/android/build.gradle
++++ b/node_modules/expo-notifications/android/build.gradle
+@@ -39,7 +39,6 @@ dependencies {
+   implementation 'org.jetbrains.kotlinx:kotlinx-coroutines-android:1.7.3'
+ 
+   // release notes in https://firebase.google.com/support/release-notes/android - cmd + f "Cloud Messaging version"
+-  implementation 'com.google.firebase:firebase-messaging:24.0.1'
+ 
+   implementation 'me.leolin:ShortcutBadger:1.1.22@aar'
+ 
+diff --git a/node_modules/expo-notifications/android/src/main/AndroidManifest.xml b/node_modules/expo-notifications/android/src/main/AndroidManifest.xml
+index 777403d..4cc7850 100644
+--- a/node_modules/expo-notifications/android/src/main/AndroidManifest.xml
++++ b/node_modules/expo-notifications/android/src/main/AndroidManifest.xml
+@@ -3,13 +3,6 @@
+   <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
+ 
+   <application>
+-    <service
+-      android:name=".service.ExpoFirebaseMessagingService"
+-      android:exported="false">
+-      <intent-filter android:priority="-1">
+-        <action android:name="com.google.firebase.MESSAGING_EVENT" />
+-      </intent-filter>
+-    </service>
+ 
+     <receiver
+       android:name=".service.NotificationsService"
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/fcmstub/FirebaseMessagingService.java b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/fcmstub/FirebaseMessagingService.java
+new file mode 100644
+index 0000000..b8b0c88
+--- /dev/null
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/fcmstub/FirebaseMessagingService.java
+@@ -0,0 +1,19 @@
++package expo.modules.notifications.fcmstub;
++
++import android.app.Service;
++import android.content.Intent;
++import android.os.IBinder;
++
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++
++/**
++ * FossFitness: stand-in for Firebase's FirebaseMessagingService (see RemoteMessage). The service
++ * is not declared in the manifest, so Android never starts it.
++ */
++public abstract class FirebaseMessagingService extends Service {
++  @Nullable @Override public IBinder onBind(Intent intent) { return null; }
++  public void onMessageReceived(@NonNull RemoteMessage message) {}
++  public void onNewToken(@NonNull String token) {}
++  public void onDeletedMessages() {}
++}
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/fcmstub/RemoteMessage.java b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/fcmstub/RemoteMessage.java
+new file mode 100644
+index 0000000..7c35423
+--- /dev/null
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/fcmstub/RemoteMessage.java
+@@ -0,0 +1,79 @@
++package expo.modules.notifications.fcmstub;
++
++import android.net.Uri;
++import android.os.Bundle;
++import android.os.Parcel;
++import android.os.Parcelable;
++
++import androidx.annotation.NonNull;
++import androidx.annotation.Nullable;
++
++import java.util.Collections;
++import java.util.Map;
++
++/**
++ * FossFitness: stand-in for Firebase's RemoteMessage so expo-notifications builds without
++ * Google's proprietary Firebase Cloud Messaging library. Remote push is not used by the app;
++ * nothing ever creates one of these, they only keep the remote-push code paths compiling.
++ */
++public class RemoteMessage implements Parcelable {
++  public static final int PRIORITY_UNKNOWN = 0;
++  public static final int PRIORITY_HIGH = 1;
++  public static final int PRIORITY_NORMAL = 2;
++
++  private final Bundle bundle;
++
++  public RemoteMessage(@NonNull Bundle bundle) {
++    this.bundle = bundle;
++  }
++
++  @NonNull public Map<String, String> getData() { return Collections.emptyMap(); }
++  @Nullable public Notification getNotification() { return null; }
++  @Nullable public String getMessageId() { return null; }
++  public long getSentTime() { return 0; }
++  public int getTtl() { return 0; }
++  @Nullable public String getFrom() { return null; }
++  @Nullable public String getTo() { return null; }
++  @Nullable public String getSenderId() { return null; }
++  public int getPriority() { return PRIORITY_UNKNOWN; }
++  public int getOriginalPriority() { return PRIORITY_UNKNOWN; }
++  @Nullable public String getCollapseKey() { return null; }
++  @Nullable public String getMessageType() { return null; }
++
++  @Override public int describeContents() { return 0; }
++  @Override public void writeToParcel(@NonNull Parcel dest, int flags) { dest.writeBundle(bundle); }
++
++  public static final Creator<RemoteMessage> CREATOR = new Creator<RemoteMessage>() {
++    @Override public RemoteMessage createFromParcel(Parcel in) { return new RemoteMessage(in.readBundle(RemoteMessage.class.getClassLoader())); }
++    @Override public RemoteMessage[] newArray(int size) { return new RemoteMessage[size]; }
++  };
++
++  public static class Notification {
++    @Nullable public String getTitle() { return null; }
++    @Nullable public String getTitleLocalizationKey() { return null; }
++    @Nullable public String[] getTitleLocalizationArgs() { return null; }
++    @Nullable public String getBody() { return null; }
++    @Nullable public String getBodyLocalizationKey() { return null; }
++    @Nullable public String[] getBodyLocalizationArgs() { return null; }
++    @Nullable public String getIcon() { return null; }
++    @Nullable public Uri getImageUrl() { return null; }
++    @Nullable public String getSound() { return null; }
++    @Nullable public String getTag() { return null; }
++    @Nullable public String getColor() { return null; }
++    @Nullable public String getClickAction() { return null; }
++    @Nullable public String getChannelId() { return null; }
++    @Nullable public Uri getLink() { return null; }
++    @Nullable public String getTicker() { return null; }
++    public boolean getSticky() { return false; }
++    public boolean getLocalOnly() { return false; }
++    public boolean getDefaultSound() { return false; }
++    public boolean getDefaultVibrateSettings() { return false; }
++    public boolean getDefaultLightSettings() { return false; }
++    @Nullable public Integer getNotificationPriority() { return null; }
++    @Nullable public Integer getVisibility() { return null; }
++    @Nullable public Integer getNotificationCount() { return null; }
++    @Nullable public Long getEventTime() { return null; }
++    @Nullable public int[] getLightSettings() { return null; }
++    @Nullable public long[] getVibrateTimings() { return null; }
++  }
++}
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/NotificationSerializer.java b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/NotificationSerializer.java
+index 5e210f0..cae7746 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/NotificationSerializer.java
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/NotificationSerializer.java
+@@ -8,7 +8,7 @@ import android.os.Bundle;
+ 
+ import androidx.annotation.Nullable;
+ 
+-import com.google.firebase.messaging.RemoteMessage;
++import expo.modules.notifications.fcmstub.RemoteMessage;
+ 
+ import org.jetbrains.annotations.NotNull;
+ import org.json.JSONArray;
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/RemoteMessageSerializer.java b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/RemoteMessageSerializer.java
+index 1f44f0e..1faf232 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/RemoteMessageSerializer.java
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/RemoteMessageSerializer.java
+@@ -2,7 +2,7 @@ package expo.modules.notifications.notifications;
+ 
+ import android.os.Bundle;
+ 
+-import com.google.firebase.messaging.RemoteMessage;
++import expo.modules.notifications.fcmstub.RemoteMessage;
+ 
+ import java.util.Map;
+ 
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/debug/DebugLogging.kt b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/debug/DebugLogging.kt
+index ea19b97..5c5dfa9 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/debug/DebugLogging.kt
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/debug/DebugLogging.kt
+@@ -4,7 +4,7 @@ import android.os.Build
+ import android.os.Bundle
+ import android.util.Log
+ import androidx.annotation.RequiresApi
+-import com.google.firebase.messaging.RemoteMessage
++import expo.modules.notifications.fcmstub.RemoteMessage
+ import expo.modules.notifications.BuildConfig
+ import expo.modules.notifications.notifications.model.Notification
+ import java.util.function.Consumer
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/interfaces/NotificationListener.java b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/interfaces/NotificationListener.java
+index ec4bbfe..a8f8a5b 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/interfaces/NotificationListener.java
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/interfaces/NotificationListener.java
+@@ -2,7 +2,7 @@ package expo.modules.notifications.notifications.interfaces;
+ 
+ import android.os.Bundle;
+ 
+-import com.google.firebase.messaging.FirebaseMessagingService;
++import expo.modules.notifications.fcmstub.FirebaseMessagingService;
+ 
+ import expo.modules.notifications.notifications.model.Notification;
+ import expo.modules.notifications.notifications.model.NotificationResponse;
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/model/RemoteNotificationContent.kt b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/model/RemoteNotificationContent.kt
+index cdbc237..e3e5ffc 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/model/RemoteNotificationContent.kt
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/model/RemoteNotificationContent.kt
+@@ -4,7 +4,7 @@ import android.content.Context
+ import android.graphics.Bitmap
+ import android.os.Parcel
+ import android.os.Parcelable
+-import com.google.firebase.messaging.RemoteMessage
++import expo.modules.notifications.fcmstub.RemoteMessage
+ import expo.modules.notifications.notifications.enums.NotificationPriority
+ import expo.modules.notifications.notifications.interfaces.INotificationContent
+ import expo.modules.notifications.notifications.presentation.builders.downloadImage
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/model/triggers/FirebaseNotificationTrigger.kt b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/model/triggers/FirebaseNotificationTrigger.kt
+index d972ff9..100807b 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/model/triggers/FirebaseNotificationTrigger.kt
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/notifications/model/triggers/FirebaseNotificationTrigger.kt
+@@ -6,7 +6,7 @@ import android.os.Parcel
+ import android.os.Parcelable
+ import androidx.annotation.RequiresApi
+ import androidx.core.os.bundleOf
+-import com.google.firebase.messaging.RemoteMessage
++import expo.modules.notifications.fcmstub.RemoteMessage
+ import expo.modules.notifications.notifications.RemoteMessageSerializer
+ import expo.modules.notifications.notifications.interfaces.NotificationTrigger
+ 
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/ExpoFirebaseMessagingService.kt b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/ExpoFirebaseMessagingService.kt
+index f175435..12dd84f 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/ExpoFirebaseMessagingService.kt
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/ExpoFirebaseMessagingService.kt
+@@ -1,7 +1,7 @@
+ package expo.modules.notifications.service
+ 
+-import com.google.firebase.messaging.FirebaseMessagingService
+-import com.google.firebase.messaging.RemoteMessage
++import expo.modules.notifications.fcmstub.FirebaseMessagingService
++import expo.modules.notifications.fcmstub.RemoteMessage
+ import expo.modules.notifications.service.interfaces.FirebaseMessagingDelegate
+ 
+ open class ExpoFirebaseMessagingService : FirebaseMessagingService() {
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/delegates/FirebaseMessagingDelegate.kt b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/delegates/FirebaseMessagingDelegate.kt
+index 90ca4ff..bc70db4 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/delegates/FirebaseMessagingDelegate.kt
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/delegates/FirebaseMessagingDelegate.kt
+@@ -2,7 +2,7 @@ package expo.modules.notifications.service.delegates
+ 
+ import android.content.Context
+ import android.os.Bundle
+-import com.google.firebase.messaging.RemoteMessage
++import expo.modules.notifications.fcmstub.RemoteMessage
+ import expo.modules.interfaces.taskManager.TaskServiceProviderHelper
+ import expo.modules.notifications.notifications.RemoteMessageSerializer
+ import expo.modules.notifications.notifications.background.BackgroundRemoteNotificationTaskConsumer
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/interfaces/FirebaseMessagingDelegate.kt b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/interfaces/FirebaseMessagingDelegate.kt
+index 124e188..41e175a 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/interfaces/FirebaseMessagingDelegate.kt
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/service/interfaces/FirebaseMessagingDelegate.kt
+@@ -1,6 +1,6 @@
+ package expo.modules.notifications.service.interfaces
+ 
+-import com.google.firebase.messaging.RemoteMessage
++import expo.modules.notifications.fcmstub.RemoteMessage
+ import expo.modules.notifications.service.NotificationsService
+ 
+ /**
+diff --git a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/tokens/PushTokenModule.kt b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/tokens/PushTokenModule.kt
+index 45d7fba..cf822e4 100644
+--- a/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/tokens/PushTokenModule.kt
++++ b/node_modules/expo-notifications/android/src/main/java/expo/modules/notifications/tokens/PushTokenModule.kt
+@@ -1,6 +1,5 @@
+ package expo.modules.notifications.tokens
+ 
+-import com.google.firebase.messaging.FirebaseMessaging
+ import expo.modules.kotlin.Promise
+ import expo.modules.kotlin.modules.Module
+ import expo.modules.kotlin.modules.ModuleDefinition
+@@ -46,49 +45,14 @@ class PushTokenModule : Module(), FirebaseTokenListener {
+      *
+      * @param promise Promise to be resolved with the token.
+      */
++    // FossFitness: built without Firebase Cloud Messaging, so there is no push token.
++    // The app only uses local (scheduled) notifications.
+     AsyncFunction("getDevicePushTokenAsync") { promise: Promise ->
+-      val instance = getFirebaseMessagingInstance(promise) ?: return@AsyncFunction
+-      instance.token
+-        .addOnCompleteListener { task ->
+-          if (!task.isSuccessful) {
+-            val exception = task.exception
+-            promise.reject(REGISTRATION_FAIL_CODE, "Fetching the token failed: ${exception?.message ?: "unknown"}", exception)
+-            return@addOnCompleteListener
+-          }
+-          val token = task.result ?: run {
+-            promise.reject(REGISTRATION_FAIL_CODE, "Fetching the token failed. Invalid token.", null)
+-            return@addOnCompleteListener
+-          }
+-
+-          promise.resolve(token)
+-          onNewToken(token)
+-        }
++      promise.reject(REGISTRATION_FAIL_CODE, "Remote push notifications are not available in this build.", null)
+     }
+ 
+     AsyncFunction("unregisterForNotificationsAsync") { promise: Promise ->
+-      val instance = getFirebaseMessagingInstance(promise) ?: return@AsyncFunction
+-      instance.deleteToken()
+-        .addOnCompleteListener { task ->
+-          if (!task.isSuccessful) {
+-            val exception = task.exception
+-            promise.reject(UNREGISTER_FOR_NOTIFICATIONS_FAIL_CODE, "Unregistering for notifications failed: ${exception?.message ?: "unknown"}", exception)
+-            return@addOnCompleteListener
+-          }
+-          promise.resolve(null)
+-        }
+-    }
+-  }
+-
+-  private fun getFirebaseMessagingInstance(promise: Promise): FirebaseMessaging? {
+-    return try {
+-      FirebaseMessaging.getInstance()
+-    } catch (e: IllegalStateException) {
+-      promise.reject(
+-        REGISTRATION_FAIL_CODE,
+-        "Make sure to complete the guide at https://docs.expo.dev/push-notifications/fcm-credentials/ : ${e.message}",
+-        e
+-      )
+-      null
++      promise.resolve(null)
+     }
+   }
+ }

@@ -1,0 +1,1 @@
+First FossFitness release: Tesseract label scanning, saved meals, medals, dark/light mode, exercise goal ring, about 150 exercises, restaurant foods, and no Google libraries.

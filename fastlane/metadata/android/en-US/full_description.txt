@@ -1,0 +1,38 @@
+<p>FossFitness tracks <b>food, water, workouts, intermittent fasting and weight</b>, and turns good days into XP, levels, streaks, daily quests and medals.</p>
+<p><b>Nutrition</b></p>
+<ul>
+<li>Over 40,000 foods: USDA FoodData Central plus menu items from 96 US restaurant chains</li>
+<li>Nutrition facts with vitamins and minerals</li>
+<li>Your own foods and saved meals (log a whole meal in one tap)</li>
+<li>Scan a Nutrition Facts label with the camera, read on the phone with Tesseract OCR</li>
+</ul>
+<p><b>Daily tracking</b></p>
+<ul>
+<li>Rings for calories, protein, water and an exercise goal</li>
+<li>Water goals that follow your activity</li>
+<li>Fasting timer and weight trend</li>
+</ul>
+<p><b>Training</b></p>
+<ul>
+<li>About 150 gym, home, cardio and sports exercises</li>
+<li>A suggested plan or your own, with set and rep logging</li>
+<li>Read-only import from Health Connect</li>
+</ul>
+<p><b>Reminders</b></p>
+<ul>
+<li>Local notifications for water, meals, fasting windows and weigh-ins</li>
+</ul>
+<p><b>Look</b></p>
+<ul>
+<li>Dark, light, follow the phone, or switch by time of day</li>
+</ul>
+<p><b>Group features (optional)</b></p>
+<ul>
+<li>Sign in to a sync server you host yourself to chat, compare progress, race on weekly XP, share foods, and back up and restore your history</li>
+<li>Without a server, everything else still works</li>
+</ul>
+<p><b>Privacy</b></p>
+<ul>
+<li>No ads, analytics or tracking, and no Google services</li>
+<li>Without an account, nothing leaves your phone</li>
+</ul>

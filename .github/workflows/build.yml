@@ -1,0 +1,113 @@
+name: Build
+
+# Every push and pull request: lint, test and build an APK (attached to the run as an artifact).
+# Tags like v2.1.0: also publish a signed GitHub Release with FossFitness.apk. The version comes
+# from app/version.json, so bump it before tagging (F-Droid reads the same file).
+on:
+  push:
+    branches: [main]
+    tags: ['v*']
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    timeout-minutes: 90
+    defaults:
+      run:
+        working-directory: app
+    env:
+      CI: '1'
+      # Optional: a sync server to suggest at sign-in (repository variable).
+      HT_DEFAULT_SERVER: ${{ vars.HT_DEFAULT_SERVER }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check the tag matches app/version.json
+        if: startsWith(github.ref, 'refs/tags/v')
+        run: |
+          want="v$(node -p "require('./version.json').versionName")"
+          [ "$want" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME does not match version.json ($want)"; exit 1; }
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint
+
+      - name: Unit tests
+        run: npm test -- --ci
+
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --no-install --clean
+
+      - name: Configure signing
+        env:
+          KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          if [ -n "$KEYSTORE_BASE64" ]; then
+            echo "$KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/release.jks"
+            {
+              echo "HT_KEYSTORE_FILE=$RUNNER_TEMP/release.jks"
+              echo "HT_KEYSTORE_PASSWORD=$KEYSTORE_PASSWORD"
+              echo "HT_KEY_ALIAS=$KEY_ALIAS"
+              echo "HT_KEY_PASSWORD=${KEY_PASSWORD:-$KEYSTORE_PASSWORD}"
+            } >> "$GITHUB_ENV"
+          else
+            echo "No signing secrets (forks, pull requests): the APK is signed with a throwaway debug key."
+          fi
+
+      - name: Build release APK
+        working-directory: app/android
+        run: ./gradlew assembleRelease --no-daemon --stacktrace
+
+      - name: Collect APK
+        id: apk
+        run: |
+          VERSION=$(node -p "require('./version.json').versionName")
+          mkdir -p "$GITHUB_WORKSPACE/out"
+          cp android/app/build/outputs/apk/release/app-release.apk "$GITHUB_WORKSPACE/out/FossFitness.apk"
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: FossFitness-${{ github.sha }}
+          path: out/FossFitness.apk
+          if-no-files-found: error
+          retention-days: 7
+
+      - name: Publish GitHub Release
+        if: startsWith(github.ref, 'refs/tags/v')
+        uses: softprops/action-gh-release@v2
+        with:
+          name: FossFitness ${{ steps.apk.outputs.version }}
+          make_latest: 'true'
+          body: |
+            Download **FossFitness.apk** on your Android phone and open it to install.
+            Installs as an update over earlier GitHub releases; your data is kept.
+          files: out/FossFitness.apk
