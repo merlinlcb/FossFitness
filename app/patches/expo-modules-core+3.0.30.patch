@@ -1,0 +1,17 @@
+diff --git a/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/activityresult/AppContextActivityResultRegistry.kt b/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/activityresult/AppContextActivityResultRegistry.kt
+index a5b971e..bc759dc 100644
+--- a/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/activityresult/AppContextActivityResultRegistry.kt
++++ b/node_modules/expo-modules-core/android/src/main/java/expo/modules/kotlin/activityresult/AppContextActivityResultRegistry.kt
+@@ -221,6 +221,12 @@ class AppContextActivityResultRegistry(
+ 
+     return object : AppContextActivityResultLauncher<I, O>() {
+       override fun launch(input: I, callback: ActivityResultCallback<O>) {
++        // Health Tracker patch (backport of expo/expo#49634, issue #50386): if the Activity was recreated and its
++        // ON_DESTROY dropped this launcher without React Native reporting a host destroy, register it again
++        // against the current Activity instead of failing until the app is restarted.
++        if (keyToRequestCode[key] == null) {
++          register(key, activity, contract, fallbackCallback)
++        }
+         val requestCode = keyToRequestCode[key]
+           ?: throw IllegalStateException("Attempting to launch an unregistered ActivityResultLauncher with contract $contract and input $input. You must ensure the ActivityResultLauncher is registered before calling launch()")
+ 

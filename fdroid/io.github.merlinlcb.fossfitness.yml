@@ -1,0 +1,42 @@
+# Draft F-Droid build recipe. It goes in fdroiddata as metadata/io.github.merlinlcb.fossfitness.yml
+# (see fdroid/README.md). F-Droid reviewers may adjust the Node install and scan rules.
+Categories:
+  - Sports & Health
+License: GPL-3.0-or-later
+AuthorName: merlinlcb
+SourceCode: https://github.com/merlinlcb/FossFitness
+IssueTracker: https://github.com/merlinlcb/FossFitness/issues
+Changelog: https://github.com/merlinlcb/FossFitness/releases
+
+AutoName: FossFitness
+
+RepoType: git
+Repo: https://github.com/merlinlcb/FossFitness.git
+
+Builds:
+  - versionName: 2.1.0
+    versionCode: 2100
+    commit: v2.1.0
+    subdir: app
+    sudo:
+      - apt-get update
+      - apt-get install -y curl
+      - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
+      - apt-get install -y nodejs
+    init: npm ci
+    output: android/app/build/outputs/apk/release/app-release-unsigned.apk
+    scanignore:
+      - app/node_modules
+    scandelete:
+      - app/node_modules
+    prebuild: FF_DISTRIBUTION=fdroid npx expo prebuild --platform android --no-install --clean
+    build:
+      - cd android
+      - FF_DISTRIBUTION=fdroid ./gradlew assembleRelease --no-daemon
+    ndk: r27b
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9.]+$
+UpdateCheckData: app/version.json|"versionCode":\s*(\d+)|app/version.json|"versionName":\s*"([^"]+)"
+CurrentVersion: 2.1.0
+CurrentVersionCode: 2100
