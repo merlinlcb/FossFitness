@@ -32,7 +32,7 @@ Builds:
     build:
       - export FF_DISTRIBUTION=fdroid
       - cd android
-      - ./gradlew assembleRelease --no-daemon
+      - gradle assembleRelease --no-daemon
     ndk: r27b
 
 AutoUpdateMode: Version
