@@ -16,21 +16,17 @@ Repo: https://github.com/merlinlcb/FossFitness.git
 Builds:
   - versionName: 2.1.0
     versionCode: 2100
-    commit: v2.1.0
+    commit: 354b06296807403af6fd41c14c9d883f7e957f49
     subdir: app
     sudo:
       - apt-get update
       - apt-get install -y curl
       - curl -fsSL https://deb.nodesource.com/setup_22.x | bash -
       - apt-get install -y nodejs
-    init: npm ci
     output: android/app/build/outputs/apk/release/app-release-unsigned.apk
-    scanignore:
-      - app/node_modules
-    scandelete:
-      - app/node_modules
-    prebuild: FF_DISTRIBUTION=fdroid npx expo prebuild --platform android --no-install --clean
     build:
+      - npm ci
+      - FF_DISTRIBUTION=fdroid npx expo prebuild --platform android --no-install --clean
       - cd android
       - FF_DISTRIBUTION=fdroid ./gradlew assembleRelease --no-daemon
     ndk: r27b
