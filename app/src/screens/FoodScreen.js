@@ -23,6 +23,7 @@ import { dayKey, addDays, parseDayKey, formatDayLabel, formatClock } from '../li
 import { FOODS, customToFood, nutritionFor, searchFoods, MEALS, mealForTime, FOOD_CATEGORIES, isMine } from '../lib/foods';
 import { tdee, projectWeight } from '../lib/calc';
 import { parseNutritionLabel } from '../lib/label';
+import { recognizeLabel } from '../lib/labelOcr';
 import { MICRONUTRIENTS } from '../lib/nutrients';
 import FactsLabel from '../components/FactsLabel';
 import { formatWeight, formatWeightDelta } from '../lib/units';
@@ -341,9 +342,7 @@ export function AddFoodSheet({ initial, day, onClose }) {
   const readLabel = async (uri) => {
     try {
       setScanning(true);
-      // On-device Tesseract OCR (modules/label-ocr): nothing leaves the phone.
-      const LabelOcr = require('expo-modules-core').requireNativeModule('LabelOcr');
-      const text = await LabelOcr.recognize(uri);
+      const text = await recognizeLabel(uri);
       const parsed = parseNutritionLabel(text);
       if (!parsed.found) {
         Alert.alert("Couldn't read a label", 'Try again with the Nutrition Facts panel filling the photo, flat and in good light.');

@@ -1,8 +1,9 @@
 name: Build
 
-# Every push and pull request: lint, test and build an APK (attached to the run as an artifact).
-# Tags like v2.1.0: also publish a signed GitHub Release with FossFitness.apk. The version comes
-# from app/version.json, so bump it before tagging (F-Droid reads the same file).
+# Every push and pull request: lint, unit tests, an APK (attached to the run as an artifact), and the
+# label scanner tested on an Android emulator.
+# Tags like v2.1.0: also publish a signed GitHub Release with FossFitness.apk, but only if every job
+# passed. The version comes from app/version.json, so bump it before tagging (F-Droid reads the same file).
 on:
   push:
     branches: [main]
@@ -36,6 +37,11 @@ jobs:
         run: |
           want="v$(node -p "require('./version.json').versionName")"
           [ "$want" = "$GITHUB_REF_NAME" ] || { echo "Tag $GITHUB_REF_NAME does not match version.json ($want)"; exit 1; }
+
+      # versionCode = major*1000 + minor*100 + patch (2.1.0 → 2100). Sync servers work the code
+      # out from the release tag the same way, so the two must agree.
+      - name: Check the version code follows the version name
+        run: node -e "const v=require('./version.json');const [a,b,c]=v.versionName.split('.').map(Number);if(v.versionCode!==a*1000+b*100+c){console.error('versionCode',v.versionCode,'should be',a*1000+b*100+c);process.exit(1)}"
 
       - uses: actions/setup-node@v4
         with:
@@ -101,8 +107,82 @@ jobs:
           if-no-files-found: error
           retention-days: 7
 
+  # The label scanner on a real Android system: the part that kept breaking between releases.
+  scanner-test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    defaults:
+      run:
+        working-directory: app
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: npm
+          cache-dependency-path: app/package-lock.json
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Allow the emulator to use KVM
+        run: |
+          echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
+          sudo udevadm control --reload-rules
+          sudo udevadm trigger --name-match=kvm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Generate Android project
+        run: npx expo prebuild --platform android --no-install --clean
+
+      - name: Build the test APKs
+        working-directory: app/android
+        run: ./gradlew :label-ocr:assembleDebugAndroidTest --no-daemon
+
+      - name: Read the sample label on an emulator
+        uses: reactivecircus/android-emulator-runner@v2
+        with:
+          api-level: 34
+          arch: x86_64
+          target: default
+          disable-animations: true
+          emulator-options: -no-window -gpu swiftshader_indirect -noaudio -no-boot-anim
+          working-directory: app/android
+          script: ./gradlew :label-ocr:connectedDebugAndroidTest --no-daemon
+
+      - name: Keep the test report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: scanner-test-report
+          path: app/modules/label-ocr/android/build/reports/androidTests/
+          if-no-files-found: ignore
+          retention-days: 7
+
+  release:
+    if: startsWith(github.ref, 'refs/tags/v')
+    needs: [build, scanner-test]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/download-artifact@v4
+        with:
+          name: FossFitness-${{ github.sha }}
+          path: out
+
+      - name: Version
+        id: apk
+        run: echo "version=$(node -p "require('./app/version.json').versionName")" >> "$GITHUB_OUTPUT"
+
       - name: Publish GitHub Release
-        if: startsWith(github.ref, 'refs/tags/v')
         uses: softprops/action-gh-release@v2
         with:
           name: FossFitness ${{ steps.apk.outputs.version }}

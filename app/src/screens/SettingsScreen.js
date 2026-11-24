@@ -13,6 +13,7 @@ import { calorieTarget, suggestedCalorieTarget, hasOwnCalorieGoal, macroTargets,
 import { formatWater } from '../lib/units';
 import { getPermissionStatus, requestPermission, sendTestNotification, rescheduleAll, cancelAll } from '../lib/notifications';
 import { exportBackup, pickBackup, exportCsv } from '../lib/backup';
+import { selfTestScanner } from '../lib/labelOcr';
 import { stepGoal, myExerciseIds, SUGGESTED_PLANS, suggestedKind } from '../lib/workoutPlan';
 import { protocolLabel } from '../lib/insights';
 import { dayKey } from '../lib/dates';
@@ -801,6 +802,9 @@ function AppPage({ goTo }) {
         />
       </Card>
 
+      <SectionTitle>Label scanner</SectionTitle>
+      <ScannerTestCard />
+
       <SectionTitle>Default page</SectionTitle>
       <Card>
         <ChipRow
@@ -848,6 +852,35 @@ function AppPage({ goTo }) {
 }
 
 // ---------- Your data (inside App settings) ----------
+
+// Reads a label image that ships with the app, so anyone can check scanning works on their phone.
+function ScannerTestCard() {
+  const [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    try {
+      const r = await selfTestScanner();
+      if (r.ok) Alert.alert('Label scanner works', `Read the sample label: ${Math.round(r.parsed.kcal)} kcal, ${Math.round(r.parsed.protein)} g protein.`);
+      else Alert.alert('Label scanner read it wrong', `It ran, but read:\n\n${r.text.slice(0, 400) || '(nothing)'}\n\n(build ${buildNumber()}) Send a screenshot of this.`);
+    } catch (e) {
+      Alert.alert('Label scanner failed', `${String((e && e.message) || e)}\n\n(build ${buildNumber()}) Send a screenshot of this.`);
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <Card>
+      <Txt dim size={14} style={{ lineHeight: 20, marginBottom: 10 }}>
+        Reads a sample Nutrition Facts label built into the app, on this phone, to check that scanning labels works.
+      </Txt>
+      <Button variant="secondary" title={busy ? 'Reading…' : 'Test the label scanner'} disabled={busy} onPress={run} />
+    </Card>
+  );
+}
+
+function buildNumber() {
+  return (Constants.expoConfig && Constants.expoConfig.android && Constants.expoConfig.android.versionCode) || '?';
+}
 
 function DataCard() {
   const t = useTheme();
