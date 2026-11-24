@@ -11,6 +11,8 @@ import { todoList } from '../lib/overview';
 import { exerciseProgress } from '../lib/exerciseGoal';
 import { eatingWindow, stageFor, fastHoursFor } from '../lib/fasting';
 import { sessionFor, scheduleForDate, motivationFor, sessionSummary, stepGoal, DAILY_GOALS } from '../lib/workoutPlan';
+import { HealthTodayCard } from '../components/HealthTrackers';
+import MoveToFossFitnessCard from '../components/MoveToFossFitness';
 
 function greeting(h) {
   if (h < 5) return 'Up late';
@@ -55,6 +57,7 @@ export default function TodayScreen({ goTo }) {
 
   return (
     <Screen>
+      <MoveToFossFitnessCard />
       <View style={{ marginBottom: 12, paddingHorizontal: 4 }}>
         <Txt size={20} weight="700">
           {greeting(now.getHours())}
@@ -146,6 +149,7 @@ export default function TodayScreen({ goTo }) {
       )}
 
       <WorkoutTodayCard state={state} goTo={goTo} />
+      <HealthTodayCard goTo={goTo} />
 
       {/* Quick water */}
       {waterOn && (

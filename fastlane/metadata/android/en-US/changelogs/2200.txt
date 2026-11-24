@@ -1,0 +1,1 @@
+Label scanning works again (it failed on every photo in 2.1.0), and Settings can now test it. New optional health trackers: tick off medications with reminders, and chart blood pressure, blood sugar or anything you measure. They stay on your phone and are never part of medals, Compare or chat.

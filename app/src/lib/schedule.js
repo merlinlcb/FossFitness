@@ -9,6 +9,7 @@ import { formatWater } from './units';
 import { MEALS } from './foods';
 import { sessionFor, scheduleForDate, motivationFor, sessionSummary } from './workoutPlan';
 import { loggingStreak } from './insights';
+import { activeMeds, isScheduled, sortTimes } from './health';
 
 const WATER_TIPS = [
   'Time for a glass of water.',
@@ -47,6 +48,18 @@ export function buildSchedule(state, now = new Date(), days = 7) {
     const m = isToday ? dayMetrics(state, key) : null;
     const midnight = atTime(base, '00:00');
     const at = (mins) => new Date(midnight.getTime() + mins * 60000);
+
+    // ---- Medications (optional health trackers): each scheduled dose not yet marked taken ----
+    if (state.health && state.health.enabled) {
+      const taken = (state.health.doses || {})[key] || {};
+      for (const med of activeMeds(state.health)) {
+        if (med.remind === false || !isScheduled(med)) continue;
+        for (const time of sortTimes(med.times)) {
+          if ((taken[med.id] || {})[time]) continue;
+          push(atTime(base, time), '💊 Medication', `Time for ${med.name}${med.dose ? ` (${med.dose})` : ''}.`, 'med');
+        }
+      }
+    }
 
     // ---- Water: spread across waking hours ----
     if (waterOn && reminders.water.enabled) {

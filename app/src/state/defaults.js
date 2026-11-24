@@ -1,4 +1,6 @@
 import { DEFAULT_HC } from '../lib/healthConnectMap';
+import { DEFAULT_HEALTH, hydrateHealth } from '../lib/health';
+
 export const STORAGE_KEY = 'healthtracker:v2';
 export const STATE_VERSION = 2;
 
@@ -56,6 +58,7 @@ export const DEFAULT_STATE = {
     history: [], // { id, start, end, targetHours }
   },
   customFoods: [],
+  health: DEFAULT_HEALTH, // optional medication + measurement trackers (lib/health.js); never synced
   meals: [], // saved meals: [{ id, name, meal, items }] (lib/meals.js)
   // Reading steps, sleep, weight and workouts from Android Health Connect (this phone only).
   healthConnect: { ...DEFAULT_HC },
@@ -114,6 +117,7 @@ export function hydrateState(saved) {
     weights: Array.isArray(saved.weights) ? saved.weights : [],
     customFoods: Array.isArray(saved.customFoods) ? saved.customFoods : [],
     meals: Array.isArray(saved.meals) ? saved.meals : [],
+    health: hydrateHealth(saved.health),
     recentFoods: Array.isArray(saved.recentFoods) ? saved.recentFoods : [],
     favorites: Array.isArray(saved.favorites) ? saved.favorites : [],
     waterPresets: Array.isArray(saved.waterPresets) && saved.waterPresets.length ? saved.waterPresets : d.waterPresets,

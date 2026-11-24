@@ -14,7 +14,7 @@ server you host yourself.
 - Over 40,000 foods: about 12,000 from USDA FoodData Central, plus about 29,000 menu items from 96 US restaurant chains (MenuStat).
 - Nutrition facts with vitamins and minerals.
 - Your own foods, saved meals (log a whole meal in one tap) and favourites.
-- Scan a Nutrition Facts label with the camera, read on the phone with Tesseract OCR.
+- Scan a Nutrition Facts label with the camera, read on the phone with Tesseract OCR. Settings → App settings → Test the label scanner checks it works on your phone, and CI tests it on an Android emulator before every release.
 
 **Daily tracking**
 - Water goals that follow your activity.
@@ -32,8 +32,13 @@ server you host yourself.
 - Daily quests.
 - 18 medal families from bronze to obsidian.
 
+**Health trackers (optional, off by default)**
+- Tick off medications, with reminders at the times you set.
+- Chart blood pressure, blood sugar, heart rate or anything else you measure, with your own target range.
+- Private: stored only on the phone (and in backups you export), never part of XP or medals, never shown in Compare or chat, never sent to a sync server.
+
 **Reminders**
-- Local, scheduled notifications for water, meals, fasting windows, weigh-ins and an evening summary.
+- Local, scheduled notifications for water, meals, medications, fasting windows, weigh-ins and an evening summary.
 
 **Look**
 - Dark, light, follow the phone, or switch by time of day.
@@ -70,6 +75,8 @@ cd android && ./gradlew assembleRelease
 | `FF_APP_ID` | `io.github.merlinlcb.fossfitness` | Android application id |
 | `HT_DEFAULT_SERVER` | (empty) | Sync server suggested at sign-in |
 | `BUILD_NUMBER` | from `app/version.json` | Version code for CI builds |
+
+Versions: `app/version.json` holds the version name and code, and the code is always `major*1000 + minor*100 + patch` (2.2.0 → 2200). CI checks this, and sync servers work the code out from the release tag the same way.
 | `HT_KEYSTORE_FILE`, `HT_KEYSTORE_PASSWORD`, `HT_KEY_ALIAS`, `HT_KEY_PASSWORD` | (none) | Release signing. Without them, the build is unsigned (F-Droid) or debug-signed |
 
 ### Patched dependencies

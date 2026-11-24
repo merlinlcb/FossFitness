@@ -7,14 +7,19 @@ const distribution = process.env.FF_DISTRIBUTION || 'github';
 // Android application id. Phones that installed the app as "Health Tracker" keep updating when a
 // build sets FF_APP_ID=com.merlinlcb.healthtracker.
 const appId = process.env.FF_APP_ID || 'io.github.merlinlcb.fossfitness';
+// Builds under the old id exist only to move those phones to FossFitness (see src/lib/migration.js),
+// so they're named so people can tell the two apps apart while both are installed.
+const legacy = appId === 'com.merlinlcb.healthtracker';
 // The HealthHub server (github.com/merlinlcb/HealthHub) suggested at sign-in. Set at build time;
 // empty means people type their server's address. Signed-in phones always use the server they signed in to.
 const defaultServer = (process.env.HT_DEFAULT_SERVER || '').trim().replace(/\/+$/, '');
 
 module.exports = {
   expo: {
-    name: 'FossFitness',
+    name: legacy ? 'Health Tracker (old)' : 'FossFitness',
     slug: 'fossfitness',
+    // fossfitness://move?... hands a sign-in over from the old app (only FossFitness itself listens).
+    ...(legacy ? {} : { scheme: 'fossfitness' }),
     version: process.env.BUILD_NUMBER ? `${release.versionName.split('.').slice(0, 2).join('.')}.${buildNumber}` : release.versionName,
     orientation: 'portrait',
     icon: './assets/icon.png',

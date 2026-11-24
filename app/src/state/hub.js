@@ -10,6 +10,7 @@ import { api, normalizeServer } from '../lib/api';
 import { buildPush, applyPull, emptyMeta, pendingCount, metaForNewAccount } from '../lib/sync';
 import { computeGame, publicStats, newAchievements, badgeById } from '../lib/game';
 import { dayKey } from '../lib/dates';
+import { APP_ID, IS_LEGACY, UPDATE_CHANNEL, FOSSFITNESS_DOWNLOAD, parseMoveUrl } from '../lib/migration';
 
 const HUB_KEY = 'healthtracker:hub';
 // From the build (app.config.js → HT_DEFAULT_SERVER). May be empty: then people type their server.
@@ -91,6 +92,8 @@ export function HubProvider({ children, activeTab }) {
           push: plan.push,
           profile: plan.settings,
           stats: gameRef.current ? publicStats(gameRef.current, stateRef.current.fasting.active) : undefined,
+          // Which app and build this is, so the server's admin can see who still needs to move to FossFitness.
+          client: { app: APP_ID, version: APP_VERSION_CODE },
         },
       });
       if (!hubRef.current || !hubRef.current.auth || hubRef.current.auth.token !== token) return;
@@ -100,9 +103,11 @@ export function HubProvider({ children, activeTab }) {
       patchHub((x) => ({ ...x, meta: result.meta, auth: x.auth ? { ...x.auth, user: res.user || x.auth.user } : x.auth }));
       setStatus({ busy: false, error: null });
       api(server, '/api/friends', { token }).then((f) => setPeople(f.people)).catch(() => {});
+      return true;
     } catch (e) {
       setStatus({ busy: false, error: e.message });
       if (e.status === 401) signOutLocally('Your sign-in is no longer valid. Sign in again in Settings → App settings → Cloud sync.');
+      return false;
     } finally {
       syncing.current = false;
     }
@@ -158,7 +163,7 @@ export function HubProvider({ children, activeTab }) {
     const server = h && h.auth ? h.auth.server : DEFAULT_SERVER;
     try {
       if (!h || !h.auth) throw new Error('not signed in');
-      const r = await api(server, '/api/app/link', { method: 'POST', token: h.auth.token, body: {} });
+      const r = await api(server, '/api/app/link', { method: 'POST', token: h.auth.token, body: { app: UPDATE_CHANNEL } });
       await Linking.openURL(`${server}${r.url}`);
     } catch {
       if (server) Linking.openURL(`${server}/get`).catch(() => {});
@@ -169,7 +174,7 @@ export function HubProvider({ children, activeTab }) {
     const h = hubRef.current;
     const server = h && h.auth ? h.auth.server : DEFAULT_SERVER;
     if (!server || !IN_APP_UPDATES) return;
-    api(server, '/api/app', { timeout: 8000 })
+    api(server, `/api/app?app=${UPDATE_CHANNEL}`, { timeout: 8000 })
       .then((a) => setUpdate(a.available && a.versionCode > APP_VERSION_CODE ? { ...a, server } : null))
       .catch(() => {});
   }, []);
@@ -208,11 +213,74 @@ export function HubProvider({ children, activeTab }) {
     });
   }, [patchHub]);
 
+  // ── moving from the old Health Tracker app to FossFitness (lib/migration.js) ──
+  // Old app: download FossFitness, from the sync server if it offers it, else from GitHub.
+  const downloadFossFitness = useCallback(async () => {
+    const h = hubRef.current;
+    try {
+      if (!h || !h.auth) throw new Error('not signed in');
+      const r = await api(h.auth.server, '/api/app/link', { method: 'POST', token: h.auth.token, body: { app: 'fossfitness' } });
+      await Linking.openURL(`${h.auth.server}${r.url}`);
+    } catch {
+      await Linking.openURL(FOSSFITNESS_DOWNLOAD);
+    }
+  }, []);
+
+  // Old app: a one-time code FossFitness can trade for its own sign-in.
+  const startMove = useCallback(async () => {
+    const h = hubRef.current;
+    if (!h || !h.auth) throw new Error('Not signed in');
+    const r = await api(h.auth.server, '/api/handoff', { method: 'POST', token: h.auth.token, body: {} });
+    return { server: h.auth.server, code: r.code };
+  }, []);
+
+  // FossFitness: sign in with a code from the old app. The first sync then restores everything.
+  const claimMove = useCallback(async ({ server, code }) => {
+    const srv = normalizeServer(server);
+    const res = await api(srv, '/api/handoff/claim', { method: 'POST', body: { code, device: 'android' } });
+    const userKey = `${srv}|${res.user.id}`;
+    patchHub((h) => {
+      if (h.meta.userKey === userKey) return { ...h, auth: { server: srv, token: res.token, user: res.user } };
+      return { ...h, auth: { server: srv, token: res.token, user: res.user }, meta: metaForNewAccount(stateRef.current, userKey) };
+    });
+    return res.user;
+  }, [patchHub]);
+
   const signOut = useCallback(async () => {
     const h = hubRef.current;
     if (h && h.auth) api(h.auth.server, '/api/logout', { method: 'POST', token: h.auth.token, body: {} }).catch(() => {});
     signOutLocally(null);
   }, [signOutLocally]);
+
+  // FossFitness: the old app opened us with fossfitness://move?server=...&code=...
+  const hubLoaded = hub !== null;
+  useEffect(() => {
+    if (IS_LEGACY || !hubLoaded) return;
+    const handle = (url) => {
+      const move = parseMoveUrl(url);
+      if (!move) return;
+      const h = hubRef.current;
+      const replacing = !!(h && h.auth);
+      Alert.alert(
+        'Move from Health Tracker?',
+        `FossFitness signs in to ${move.server.replace(/^https?:\/\//, '')} with your Health Tracker account and brings over your history, foods and settings.` +
+          (replacing ? `\n\nThis replaces the account FossFitness is signed in to now (${h.auth.user.displayName || h.auth.user.username}).` : ''),
+        [
+          { text: 'Cancel', style: 'cancel' },
+          {
+            text: 'Move',
+            onPress: () =>
+              claimMove(move)
+                .then((user) => Alert.alert('Moved', `Signed in as ${user.displayName || user.username}. Your history is coming in now; it can take a minute.`))
+                .catch((e) => Alert.alert("Couldn't move", `${(e && e.message) || e}\n\nOpen Health Tracker (old) and tap "Open FossFitness" again.`)),
+          },
+        ]
+      );
+    };
+    Linking.getInitialURL().then(handle).catch(() => {});
+    const sub = Linking.addEventListener('url', (e) => handle(e.url));
+    return () => sub.remove();
+  }, [hubLoaded, claimMove]);
 
   // ── timers and triggers ──────────────────────────────────────────────────
   const authKey = hub && hub.auth ? `${hub.auth.server}|${hub.auth.token}` : '';
@@ -310,9 +378,10 @@ export function HubProvider({ children, activeTab }) {
       meta: hub ? hub.meta : emptyMeta(),
       status, pending, people, messages, chatError, unread, update, game,
       signIn, signOut, syncNow, postChat, downloadUpdate,
+      downloadFossFitness, startMove,
       celebration, dismissCelebration: () => setCelebration(null),
     }),
-    [hub, status, pending, people, messages, chatError, unread, update, game, signIn, signOut, syncNow, postChat, downloadUpdate, celebration]
+    [hub, status, pending, people, messages, chatError, unread, update, game, signIn, signOut, syncNow, postChat, downloadUpdate, downloadFossFitness, startMove, celebration]
   );
   return <HubContext.Provider value={value}>{children}</HubContext.Provider>;
 }
