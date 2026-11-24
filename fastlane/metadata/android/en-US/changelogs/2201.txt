@@ -1,0 +1,1 @@
+Health trackers: readings can be entered for any past date (from a paper log, for example), and medications have a dose history where you can tick past days or mark every dose taken since a date. New medications can start from the day you began taking them.

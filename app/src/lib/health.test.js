@@ -107,3 +107,19 @@ test('medication reminders: one per scheduled dose not yet taken, only when swit
   s = reducer(setup(), { type: 'SET_HEALTH', patch: { enabled: false } });
   expect(meds(s)).toHaveLength(0);
 });
+
+test('"taken every day since": fills scheduled doses up to now, keeps existing ones, skips later today', () => {
+  const { backfillDoses, dayRange } = require('./health');
+  let s = setup(); // Metformin at 08:00 and 20:00
+  s = reducer(s, { type: 'TOGGLE_DOSE', day: '2026-11-19', medId: 'met', slot: '08:00', at: '2026-11-19T15:12:00.000Z' });
+  const now = new Date(2026, 10, 20, 12, 0); // noon on the 20th
+  const h = backfillDoses(s.health, 'met', '2026-11-18', now);
+  expect(Object.keys(h.doses)).toEqual(['2026-11-19', '2026-11-18', '2026-11-20']);
+  expect(Object.keys(h.doses['2026-11-18'].met)).toEqual(['08:00', '20:00']);
+  expect(h.doses['2026-11-19'].met['08:00']).toBe('2026-11-19T15:12:00.000Z'); // kept as marked
+  expect(h.doses['2026-11-20'].met).toEqual({ '08:00': new Date(2026, 10, 20, 8, 0).toISOString() }); // 20:00 not due yet
+  expect(adherence(h, 3, now).met).toEqual({ taken: 5, due: 5 });
+  // As-needed medications have nothing to fill in.
+  expect(backfillDoses(s.health, 'ibu', '2026-11-18', now)).toBe(s.health);
+  expect(dayRange('2026-10-30', '2026-11-02')).toEqual(['2026-10-30', '2026-10-31', '2026-11-01', '2026-11-02']);
+});

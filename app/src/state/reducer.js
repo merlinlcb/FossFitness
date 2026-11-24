@@ -3,7 +3,7 @@ import { DEFAULT_STATE, EMPTY_DAY, hydrateState } from './defaults';
 import { cardioLog } from '../lib/workoutPlan';
 import { workoutActivities } from '../lib/workoutLog';
 import { mergeHealthConnect } from '../lib/healthConnectMap';
-import { toggleDose, sortTimes } from '../lib/health';
+import { toggleDose, sortTimes, backfillDoses } from '../lib/health';
 
 const MAX_RECENT_FOODS = 25;
 
@@ -311,6 +311,8 @@ function baseReducer(state, action) {
       }
       return { ...state, health: { ...state.health, meds: state.health.meds.filter((m) => m.id !== action.id), doses } };
     }
+    case 'BACKFILL_DOSES':
+      return { ...state, health: backfillDoses(state.health, action.medId, action.from, action.now) };
     case 'TOGGLE_DOSE':
       return { ...state, health: toggleDose(state.health, action.day, action.medId, action.slot, action.at) };
     case 'SAVE_METRIC': {
