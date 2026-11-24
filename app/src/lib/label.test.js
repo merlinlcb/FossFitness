@@ -51,3 +51,15 @@ test('nothing recognisable', () => {
   expect(parseNutritionLabel('hello world')).toMatchObject({ kcal: null, protein: null, found: 0 });
   expect(parseNutritionLabel(null).found).toBe(0);
 });
+
+// The sample label bundled with the app (modules/label-ocr/.../labelocr/sample-label.png), as
+// Tesseract reads it; Settings → "Test the label scanner" and CI rely on this check.
+test('the built-in scanner self-test label', () => {
+  const { checkSelfTest } = require('./labelOcr');
+  const text = 'Nutrition Facts\n\nServing size 1 cup (228g)\n\nCalories 250\n\nTotal Fat 12g\n\nSodium 470mg\n\nTotal Carbohydrate 31g\n\nProtein 5g\n\nVitamin C 2mg\n';
+  const r = checkSelfTest(text);
+  expect(r.ok).toBe(true);
+  expect(r.parsed.fat).toBe(12);
+  expect(checkSelfTest('').ok).toBe(false);
+  expect(checkSelfTest('Calories 25O\nProtein 3g').ok).toBe(false);
+});

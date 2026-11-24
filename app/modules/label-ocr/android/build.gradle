@@ -11,11 +11,10 @@ android {
   defaultConfig {
     versionCode 1
     versionName '1.0.0'
+    testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
   }
-  // The trained model is already compressed; storing it as-is lets Tesseract copy it quickly.
-  androidResources {
-    noCompress 'traineddata'
-  }
+  // No noCompress here on purpose: it would only apply to this module's own test APK, not to the app,
+  // and the test must see the model stored the same way the app does (compressed).
 }
 
 repositories {
@@ -26,4 +25,9 @@ repositories {
 dependencies {
   implementation 'cz.adaptech.tesseract4android:tesseract4android:4.9.0'
   implementation 'androidx.exifinterface:exifinterface:1.3.7'
+
+  // On-device test of the label reader (androidTest/), run in CI on an emulator before each release.
+  androidTestImplementation 'androidx.test:runner:1.6.2'
+  androidTestImplementation 'androidx.test.ext:junit:1.2.1'
+  androidTestImplementation 'junit:junit:4.13.2'
 }
