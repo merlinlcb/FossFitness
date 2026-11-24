@@ -120,7 +120,7 @@ function ShellInner({ index, setIndex, pages, setPages }) {
         goTo('fast');
       } else {
         const kind = resp.notification?.request?.content?.data?.kind;
-        const map = { water: 'water', fasting: 'fast', meal: 'food', weight: 'progress', exercise: 'move', workout: 'move', summary: 'today', streak: 'today', chat: 'chat' };
+        const map = { water: 'water', fasting: 'fast', med: 'today', meal: 'food', weight: 'progress', exercise: 'move', workout: 'move', summary: 'today', streak: 'today', chat: 'chat' };
         if (map[kind]) goTo(map[kind]);
       }
     });

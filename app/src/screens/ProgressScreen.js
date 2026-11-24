@@ -13,6 +13,7 @@ import { bmi, bmiCategory, projectGoalDate } from '../lib/calc';
 import { dayKey, addDays, parseDayKey, formatShortDate, formatClock } from '../lib/dates';
 import { formatWeight, formatWeightDelta, weightToDisplay } from '../lib/units';
 import { weekOf, foodLogged, exerciseSplit, exerciseLogged, currentRun, bestRun } from '../lib/logStreaks';
+import { HealthCharts } from '../components/HealthTrackers';
 
 const RANGES = [
   { key: 7, label: '1w' },
@@ -159,6 +160,8 @@ export default function ProgressScreen({ goTo, sub }) {
       <FoodStreak />
       <ExerciseStreak />
       <WeekCard now={new Date()} day={dayKey()} setDay={(k) => goTo && goTo('move', { day: k })} />
+
+      <HealthCharts />
 
       <Sheet visible={historyOpen} onClose={() => setHistoryOpen(false)} title="Weigh-in history">
         {[...state.weights].reverse().map((w) => (

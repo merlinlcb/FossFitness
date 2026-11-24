@@ -3,6 +3,7 @@ import { DEFAULT_STATE, EMPTY_DAY, hydrateState } from './defaults';
 import { cardioLog } from '../lib/workoutPlan';
 import { workoutActivities } from '../lib/workoutLog';
 import { mergeHealthConnect } from '../lib/healthConnectMap';
+import { toggleDose, sortTimes } from '../lib/health';
 
 const MAX_RECENT_FOODS = 25;
 
@@ -290,6 +291,54 @@ function baseReducer(state, action) {
     // ---- "Complete today's log" (a review, not a lock: the day stays editable) ----
     case 'SET_DAY_COMPLETE':
       return updateDay(state, action.day, (d) => ({ ...d, completedAt: action.done ? new Date().toISOString() : null }));
+
+    // ---- Optional health trackers (lib/health.js): never synced, never part of the game ----
+    case 'SET_HEALTH':
+      return { ...state, health: { ...state.health, ...action.patch } };
+    case 'SAVE_MED': {
+      const med = { active: true, remind: true, dose: '', ...action.med, times: sortTimes(action.med.times) };
+      const id = med.id || uid();
+      const meds = state.health.meds.some((m) => m.id === id)
+        ? state.health.meds.map((m) => (m.id === id ? { ...med, id } : m))
+        : [...state.health.meds, { ...med, id }];
+      return { ...state, health: { ...state.health, meds } };
+    }
+    case 'REMOVE_MED': {
+      const doses = {};
+      for (const [day, byMed] of Object.entries(state.health.doses)) {
+        const { [action.id]: _gone, ...rest } = byMed;
+        if (Object.keys(rest).length) doses[day] = rest;
+      }
+      return { ...state, health: { ...state.health, meds: state.health.meds.filter((m) => m.id !== action.id), doses } };
+    }
+    case 'TOGGLE_DOSE':
+      return { ...state, health: toggleDose(state.health, action.day, action.medId, action.slot, action.at) };
+    case 'SAVE_METRIC': {
+      const id = action.metric.id || uid();
+      const metric = { ...action.metric, id };
+      const metrics = state.health.metrics.some((m) => m.id === id)
+        ? state.health.metrics.map((m) => (m.id === id ? metric : m))
+        : [...state.health.metrics, metric];
+      return { ...state, health: { ...state.health, metrics } };
+    }
+    case 'REMOVE_METRIC':
+      return {
+        ...state,
+        health: {
+          ...state.health,
+          metrics: state.health.metrics.filter((m) => m.id !== action.id),
+          readings: state.health.readings.filter((r) => r.metricId !== action.id),
+        },
+      };
+    case 'ADD_READING': {
+      const reading = { t: new Date().toISOString(), note: '', ...action.reading, id: action.reading.id || uid() };
+      const readings = state.health.readings.some((r) => r.id === reading.id)
+        ? state.health.readings.map((r) => (r.id === reading.id ? reading : r))
+        : [...state.health.readings, reading];
+      return { ...state, health: { ...state.health, readings } };
+    }
+    case 'REMOVE_READING':
+      return { ...state, health: { ...state.health, readings: state.health.readings.filter((r) => r.id !== action.id) } };
 
     // ---- Sync ----
     // `apply` is a pure function (see lib/sync.js applyPull) run against the

@@ -1,0 +1,6 @@
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+  <!-- Android 11+ hides other apps unless they are named here. Only FossFitness is ever looked up. -->
+  <queries>
+    <package android:name="io.github.merlinlcb.fossfitness" />
+  </queries>
+</manifest>

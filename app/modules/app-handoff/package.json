@@ -1,0 +1,7 @@
+{
+  "name": "app-handoff",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Checks that another app on the phone is the real one (signing certificate) and opens it with a link meant only for it",
+  "license": "GPL-3.0-or-later"
+}

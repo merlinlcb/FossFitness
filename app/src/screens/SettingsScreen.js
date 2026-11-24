@@ -14,6 +14,9 @@ import { formatWater } from '../lib/units';
 import { getPermissionStatus, requestPermission, sendTestNotification, rescheduleAll, cancelAll } from '../lib/notifications';
 import { exportBackup, pickBackup, exportCsv } from '../lib/backup';
 import { selfTestScanner } from '../lib/labelOcr';
+import { HealthSettingsPage } from '../components/HealthTrackers';
+import MoveToFossFitnessCard from '../components/MoveToFossFitness';
+import { IS_LEGACY } from '../lib/migration';
 import { stepGoal, myExerciseIds, SUGGESTED_PLANS, suggestedKind } from '../lib/workoutPlan';
 import { protocolLabel } from '../lib/insights';
 import { dayKey } from '../lib/dates';
@@ -33,12 +36,15 @@ const SECTIONS = [
   { key: 'profile', icon: '👤', label: 'Physical profile', desc: 'Name, body stats, goal and sleep' },
   { key: 'training', icon: '🏋️', label: 'Training', desc: 'Your plan, exercises and steps' },
   { key: 'nutrition', icon: '🍽️', label: 'Nutrition', desc: 'Calories, macros, water and fasting' },
+  { key: 'trackers', icon: '🩺', label: 'Health trackers', desc: 'Optional: medications, and charts for blood pressure, blood sugar or anything you measure' },
   { key: 'reminders', icon: '🔔', label: 'Notifications and reminders', desc: 'Every reminder, plus chat notifications' },
   { key: 'app', icon: '📱', label: 'App settings', desc: 'Appearance, default page, units, cloud sync, Health Connect and your data' },
   { key: 'sync', icon: '☁️', label: 'Cloud sync', parent: 'app' },
   { key: 'health', icon: '📲', label: 'Health Connect', parent: 'app' },
 ];
-const MENU = SECTIONS.filter((s) => !s.parent);
+// The old Health Tracker app only exists to move people to FossFitness; health trackers aren't synced,
+// so they'd be left behind, and aren't offered there.
+const MENU = SECTIONS.filter((s) => !s.parent && !(IS_LEGACY && s.key === 'trackers'));
 
 // Where Android back goes from a settings page: its parent page, or the menu (null).
 export const settingsParent = (sub) => (SECTIONS.find((s) => s.key === sub) || {}).parent || null;
@@ -47,7 +53,7 @@ export default function SettingsScreen({ sub, goTo }) {
   const t = useTheme();
   const section = SECTIONS.find((s) => s.key === sub);
   if (!section) return <Menu goTo={goTo} />;
-  const Page = { profile: ProfilePage, training: TrainingPage, nutrition: NutritionPage, health: HealthConnectPage, sync: CloudSyncPage, reminders: RemindersPage, app: AppPage }[section.key];
+  const Page = { profile: ProfilePage, training: TrainingPage, nutrition: NutritionPage, health: HealthConnectPage, sync: CloudSyncPage, reminders: RemindersPage, app: AppPage, trackers: HealthSettingsPage }[section.key];
   const parent = section.parent && SECTIONS.find((s) => s.key === section.parent);
   return (
     <Screen>
@@ -71,6 +77,7 @@ function Menu({ goTo }) {
   const perm = usePermission();
   return (
     <Screen>
+      <MoveToFossFitnessCard />
       {perm.status !== 'granted' && <PermissionBanner perm={perm} />}
       <Card>
         {MENU.map((s, i) => (

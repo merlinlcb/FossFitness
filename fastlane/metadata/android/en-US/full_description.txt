@@ -18,6 +18,12 @@
 <li>A suggested plan or your own, with set and rep logging</li>
 <li>Read-only import from Health Connect</li>
 </ul>
+<p><b>Health trackers (optional)</b></p>
+<ul>
+<li>Tick off medications, with reminders at the times you set</li>
+<li>Chart blood pressure, blood sugar, heart rate or anything else you measure, with your own target range</li>
+<li>Private: kept on your phone, never part of medals or quests, never shown in Compare or chat, never sent to a sync server</li>
+</ul>
 <p><b>Reminders</b></p>
 <ul>
 <li>Local notifications for water, meals, fasting windows and weigh-ins</li>
