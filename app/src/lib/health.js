@@ -13,7 +13,7 @@
 //   readings: [{ id, metricId, t: isoTime, values: [number, ...], note }]
 // }
 
-import { dayKey, timeToMinutes } from './dates';
+import { addDays, atTime, dayKey, parseDayKey, timeToMinutes } from './dates';
 
 export const DEFAULT_HEALTH = { enabled: false, meds: [], doses: {}, metrics: [], readings: [] };
 
@@ -98,6 +98,43 @@ export function toggleDose(health, day, medId, slot, at = new Date().toISOString
   const doses = { ...(health.doses || {}) };
   if (Object.keys(dayDoses).length) doses[day] = dayDoses;
   else delete doses[day];
+  return { ...health, doses };
+}
+
+// Local day keys from `fromDay` to `toDay`, oldest first (at most `max` days).
+export function dayRange(fromDay, toDay, max = 366) {
+  const out = [];
+  let d = parseDayKey(fromDay);
+  const end = parseDayKey(toDay);
+  while (d <= end && out.length < max) {
+    out.push(dayKey(d));
+    d = addDays(d, 1);
+  }
+  return out;
+}
+
+// Whether a scheduled dose time has come yet (doses later today can't be marked taken).
+export function doseDue(day, time, now = new Date()) {
+  return atTime(parseDayKey(day), time) <= now;
+}
+
+// "I took it every day since ...": marks every scheduled dose from `fromDay` up to now as taken at
+// its scheduled time. Doses already marked keep their time.
+export function backfillDoses(health, medId, fromDay, now = new Date()) {
+  const med = (health.meds || []).find((m) => m.id === medId);
+  if (!med || !isScheduled(med)) return health;
+  const doses = { ...(health.doses || {}) };
+  for (const day of dayRange(fromDay, dayKey(now))) {
+    const byMed = { ...(doses[day] || {}) };
+    const got = { ...(byMed[medId] || {}) };
+    for (const time of sortTimes(med.times)) {
+      if (!got[time] && doseDue(day, time, now)) got[time] = atTime(parseDayKey(day), time).toISOString();
+    }
+    if (Object.keys(got).length) {
+      byMed[medId] = got;
+      doses[day] = byMed;
+    }
+  }
   return { ...health, doses };
 }
 

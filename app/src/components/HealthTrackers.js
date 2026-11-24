@@ -7,13 +7,15 @@ import Svg, { Polyline, Circle, Line, Rect, Text as SvgText } from 'react-native
 import { useStore } from '../state/store';
 import { useTheme } from '../theme';
 import { Card, Txt, Button, Sheet, ChipRow, NumberField, TextField, TimeRow, Segmented, SectionTitle, Empty } from './ui';
-import { dayKey, formatClock, formatTime12, formatShortDate, minutesToTime, timeToMinutes } from '../lib/dates';
+import { addDays, atTime, dayKey, formatClock, formatDayLabel, formatTime12, formatShortDate, minutesToTime, parseDayKey, uid } from '../lib/dates';
 import {
   METRIC_PRESETS,
   activeMeds,
   adherence,
   chartSeries,
   dosesForDay,
+  doseDue,
+  sortTimes,
   formatValues,
   isScheduled,
   latestReading,
@@ -204,21 +206,124 @@ function MetricCard({ metric }) {
 function AdherenceCard({ meds }) {
   const t = useTheme();
   const { state } = useStore();
+  const [open, setOpen] = useState(null);
   const a = adherence(state.health, 7);
   return (
     <Card title="💊 Medication, last 7 days">
       {meds.map((m) => {
         const x = a[m.id] || { taken: 0, due: 0 };
         return (
-          <View key={m.id} style={{ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6 }}>
+          <Pressable
+            key={m.id}
+            onPress={() => setOpen(m.id)}
+            style={({ pressed }) => ({ flexDirection: 'row', justifyContent: 'space-between', paddingVertical: 6, opacity: pressed ? 0.6 : 1 })}
+          >
             <Txt>{m.name}</Txt>
             <Txt weight="600" color={x.due && x.taken < x.due ? t.warn : t.good}>
-              {x.taken} of {x.due} doses
+              {x.taken} of {x.due} doses ›
             </Txt>
-          </View>
+          </Pressable>
         );
       })}
+      <Txt faint size={12} style={{ marginTop: 4 }}>Tap a medication to see or fix past days.</Txt>
+      {open && (
+        <Sheet visible onClose={() => setOpen(null)} title="Dose history">
+          <DoseHistory medId={open} />
+        </Sheet>
+      )}
     </Card>
+  );
+}
+
+// ‹ date › picker for past days (never later than today).
+function DayStepper({ day, onChange, label }) {
+  const today = dayKey();
+  return (
+    <View style={{ marginBottom: 10 }}>
+      {label ? <Txt dim size={13} weight="600" style={{ marginBottom: 6 }}>{label}</Txt> : null}
+      <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }}>
+        <Button small variant="secondary" title="‹" onPress={() => onChange(dayKey(addDays(parseDayKey(day), -1)))} />
+        <Txt weight="600">{day === today ? 'Today' : `${formatDayLabel(day)} · ${formatShortDate(day)}`}</Txt>
+        <Button small variant="secondary" title="›" disabled={day >= today} onPress={() => onChange(dayKey(addDays(parseDayKey(day), 1)))} />
+      </View>
+    </View>
+  );
+}
+
+// Past days of one scheduled medication: tick or untick any dose, or mark a whole stretch taken.
+function DoseHistory({ medId }) {
+  const t = useTheme();
+  const { state, dispatch } = useStore();
+  const med = state.health.meds.find((m) => m.id === medId);
+  const today = dayKey();
+  const [since, setSince] = useState(dayKey(addDays(new Date(), -6)));
+  const [shown, setShown] = useState(14);
+  if (!med || !isScheduled(med)) return <Empty>This medication is taken as needed, so it has no schedule to fill in.</Empty>;
+  const times = sortTimes(med.times);
+  const days = Array.from({ length: shown }, (_, i) => dayKey(addDays(new Date(), -i)));
+  const taken = (day, time) => ((state.health.doses[day] || {})[med.id] || {})[time];
+
+  const markSince = () =>
+    Alert.alert(
+      'Mark doses taken?',
+      `Every ${med.name} dose from ${since === today ? 'today' : formatShortDate(since)} until now is marked taken at its usual time. Doses you already marked keep their time.`,
+      [
+        { text: 'Cancel', style: 'cancel' },
+        { text: 'Mark taken', onPress: () => dispatch({ type: 'BACKFILL_DOSES', medId: med.id, from: since }) },
+      ]
+    );
+
+  return (
+    <View>
+      <Txt weight="700" style={{ marginBottom: 6 }}>
+        {med.name}
+        {med.dose ? <Txt dim> · {med.dose}</Txt> : null}
+      </Txt>
+      <Card style={{ marginHorizontal: 0 }}>
+        <DayStepper label="Taken every day since" day={since} onChange={setSince} />
+        <Button small title="Mark every dose taken since then" onPress={markSince} />
+      </Card>
+      <Txt dim size={13} weight="600" style={{ marginTop: 6, marginBottom: 4 }}>Or tick days one by one</Txt>
+      {days.map((day) => (
+        <View key={day} style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 0.5, borderBottomColor: t.border }}>
+          <Txt size={14} style={{ flex: 1 }}>{day === today ? 'Today' : `${formatDayLabel(day)} · ${formatShortDate(day)}`}</Txt>
+          <View style={{ flexDirection: 'row', gap: 6, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+            {times.map((time) => {
+              const due = doseDue(day, time);
+              const got = taken(day, time);
+              return (
+                <Pressable
+                  key={time}
+                  disabled={!due}
+                  onPress={() =>
+                    dispatch({
+                      type: 'TOGGLE_DOSE',
+                      day,
+                      medId: med.id,
+                      slot: time,
+                      at: day === today ? new Date().toISOString() : atTime(parseDayKey(day), time).toISOString(),
+                    })
+                  }
+                  style={({ pressed }) => ({
+                    paddingVertical: 6,
+                    paddingHorizontal: 10,
+                    borderRadius: 14,
+                    backgroundColor: got ? t.good : t.cardAlt,
+                    opacity: !due ? 0.4 : pressed ? 0.6 : 1,
+                  })}
+                >
+                  <Txt size={13} weight="600" color={got ? t.primaryText : t.text}>
+                    {got ? '✓ ' : ''}
+                    {formatTime12(time)}
+                  </Txt>
+                </Pressable>
+              );
+            })}
+          </View>
+        </View>
+      ))}
+      <Button small variant="ghost" title="Show 30 more days" onPress={() => setShown((n) => n + 30)} />
+    </View>
   );
 }
 
@@ -307,15 +412,15 @@ function ReadingSheet({ metric, reading, onClose }) {
   const { dispatch } = useStore();
   const [values, setValues] = useState(reading ? reading.values : metric.fields.map(() => null));
   const when = reading ? new Date(reading.t) : new Date();
-  const [day] = useState(dayKey(when));
+  const [day, setDay] = useState(dayKey(when));
   const [time, setTime] = useState(minutesToTime(when.getHours() * 60 + when.getMinutes()));
   const [note, setNote] = useState(reading ? reading.note || '' : '');
-  const ok = validValues(metric, values);
+  const at = atTime(parseDayKey(day), time);
+  const future = at.getTime() > Date.now() + 60000;
+  const ok = validValues(metric, values) && !future;
 
   const save = () => {
-    const d = new Date(when);
-    const mins = timeToMinutes(time);
-    d.setHours(Math.floor(mins / 60), mins % 60, 0, 0);
+    const d = at;
     dispatch({ type: 'ADD_READING', reading: { ...(reading ? { id: reading.id } : {}), metricId: metric.id, t: d.toISOString(), values, note: note.trim() } });
     onClose();
   };
@@ -353,7 +458,9 @@ function ReadingSheet({ metric, reading, onClose }) {
           onChange={(v) => setValues((vs) => vs.map((x, j) => (j === i ? v : x)))}
         />
       ))}
-      <TimeRow label={day === dayKey() ? 'Time (today)' : `Time (${formatShortDate(day)})`} value={time} onChange={setTime} />
+      <DayStepper label="Date" day={day} onChange={setDay} />
+      <TimeRow label="Time" value={time} onChange={setTime} />
+      {future && <Txt size={12} color={t.warn}>That time hasn't happened yet today.</Txt>}
       <TextField label="Note (optional)" value={note} onChangeText={setNote} placeholder="e.g. after breakfast" />
     </Sheet>
   );
@@ -368,11 +475,24 @@ function MedEditorSheet({ med, onClose }) {
   const [times, setTimes] = useState(isScheduled(med) ? med.times : ['08:00']);
   const [remind, setRemind] = useState(med.remind !== false);
   const [active, setActive] = useState(med.active !== false);
+  const [view, setView] = useState('main'); // main | history
+  // New medication already being taken: fill in doses since this day (null = start from now).
+  const [since, setSince] = useState(null);
 
   const save = () => {
-    dispatch({ type: 'SAVE_MED', med: { ...(med.id ? { id: med.id } : {}), name: name.trim(), dose: dose.trim(), times: kind === 'prn' ? [] : times, remind, active } });
+    const id = med.id || uid();
+    dispatch({ type: 'SAVE_MED', med: { id, name: name.trim(), dose: dose.trim(), times: kind === 'prn' ? [] : times, remind, active } });
+    if (!med.id && since && kind === 'scheduled') dispatch({ type: 'BACKFILL_DOSES', medId: id, from: since });
     onClose();
   };
+
+  if (view === 'history') {
+    return (
+      <Sheet visible onClose={onClose} title="Dose history" footer={<Button variant="secondary" title="‹ Back" onPress={() => setView('main')} />}>
+        <DoseHistory medId={med.id} />
+      </Sheet>
+    );
+  }
   const remove = () =>
     Alert.alert(`Delete ${med.name}?`, 'Its history of doses is deleted too. To stop it for now but keep the history, pause it instead.', [
       { text: 'Cancel', style: 'cancel' },
@@ -421,9 +541,23 @@ function MedEditorSheet({ med, onClose }) {
           ))}
           <Button small variant="ghost" title="＋ Another time" style={{ alignSelf: 'flex-start' }} onPress={() => setTimes((ts) => [...ts, '20:00'])} />
           <SwitchRow label="Remind me" sub="A notification at each time, unless it's already marked taken." value={remind} onChange={setRemind} />
+          {!med.id && (
+            <>
+              <SwitchRow
+                label="I've already been taking it"
+                sub="Marks every dose taken since the day you started, at its usual time. You can untick any you missed afterwards."
+                value={!!since}
+                onChange={(v) => setSince(v ? dayKey(addDays(new Date(), -13)) : null)}
+              />
+              {since && <DayStepper label="Started on" day={since} onChange={setSince} />}
+            </>
+          )}
         </View>
       )}
       {med.id && <SwitchRow label="Taking it now" sub="Off pauses it: hidden from Today, history kept." value={active} onChange={setActive} />}
+      {med.id && isScheduled(med) && (
+        <Button variant="secondary" title="Dose history: fix or fill in past days ›" style={{ marginTop: 8 }} onPress={() => setView('history')} />
+      )}
     </Sheet>
   );
 }
