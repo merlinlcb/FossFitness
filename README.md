@@ -93,6 +93,12 @@ Versions: `app/version.json` holds the version name and code, and the code is al
 - **Signed in:** the app talks only to the server you chose. That server's admin can see everyone's history; other members see levels, streaks, XP, chat, shared notes and the Compare view (never food logs).
 - **Label scanning:** runs entirely on the phone.
 
+## Contributing
+
+Help is welcome. [CONTRIBUTING.md](CONTRIBUTING.md) explains how the app is put together, how to build and test it,
+and how changes are reviewed. Automated contributors also follow [AGENTS.md](AGENTS.md). To report a security problem
+privately, see [SECURITY.md](SECURITY.md).
+
 ## License
 
 FossFitness is free software under the [GNU General Public License v3.0 or later](LICENSE).
