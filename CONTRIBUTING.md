@@ -384,16 +384,27 @@ requests labelled `automated`; they never push to `main`, merge, tag or release.
 reviewed by an automated reviewer against the checklist above. Anything it can't verify with confidence goes to a
 human maintainer, and a human maintainer always has the final say.
 
-## Releases (maintainers)
+## Releases
 
-Releases go to people's phones automatically: GitHub builds are offered by the in-app updater, and F-Droid picks
-up new tags on its own. So a release is only made from a green `main`.
+Releases go to people's phones automatically: GitHub builds are offered by the in-app updater (through HealthHub),
+and F-Droid picks up new tags on its own. So a release is only made from a green `main`.
+
+**Patch releases are automatic.** When `main` has merged changes to the app (anything under `app/` except tests and
+`app/scripts/`) that aren't released yet, and nothing else has merged for an hour, the FossFitness Bot opens a pull
+request named `Release vX.Y.Z`. It raises the patch number in `app/version.json` and writes
+`fastlane/metadata/android/en-US/changelogs/<versionCode>.txt` from the **For the changelog** section of each merged
+pull request ("Bug fixes and small improvements." if none has one). Once CI is green, the release pull request is
+checked to contain exactly those two files, merged, and tagged `vX.Y.Z`. The tag builds and publishes the release.
+To hold a release back, close that pull request. Changes that are only tests or docs never cause a release.
+
+**Minor and major versions are made by a maintainer:**
 
 1. Set the new version in `app/version.json` (`versionCode` = major×1000 + minor×100 + patch).
 2. Add `fastlane/metadata/android/en-US/changelogs/<versionCode>.txt`: a few plain sentences for users.
 3. Commit, then tag `v<versionName>` (for example `v2.3.0`) and push the tag.
-4. CI checks the tag matches `version.json`, builds and signs the APK, runs the on-device test, and publishes a
-   GitHub Release with `FossFitness.apk`.
+
+Either way, CI checks the tag matches `version.json`, builds and signs the APK, runs the on-device test, and
+publishes a GitHub Release with `FossFitness.apk`.
 
 The release signing key is held by the maintainer and lives only in the repository's CI secrets. Forks and pull
 requests build with a debug key. The F-Droid build is signed by F-Droid.
