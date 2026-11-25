@@ -1,0 +1,1 @@
+Maintenance release: updated build tools (Expo 54.0.38, patch-package 8.0.1) and security fixes for build-time dependencies. No changes to how the app works.
