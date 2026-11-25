@@ -2,6 +2,12 @@
 
 <!-- What does this change, and why? Link the issue: "Closes #123". -->
 
+## For the changelog
+
+<!-- One or two plain sentences for app users about what they'll notice, e.g. "The start page setting now opens the
+page you picked." Write "none" if users won't notice anything (tests, docs, refactoring). Releases are built from
+these lines automatically. -->
+
 ## How I tested it
 
 <!-- Tests added or changed, and anything you checked by hand (on which phone / Android version). -->

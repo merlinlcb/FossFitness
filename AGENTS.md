@@ -8,7 +8,10 @@ because an automated change can be confidently wrong, and a release reaches peop
 
 - **Do** work on a branch named `bot/<short-description>` and open a pull request against `main`.
 - **Do** label the pull request `automated` and fill in every section of the pull request template.
-- **Never** push to `main`, merge a pull request, create or push tags, or create releases.
+- **Do** write **For the changelog** for app users, not developers: one or two plain sentences about what they'll
+  notice, or `none`. Release notes are built from it automatically.
+- **Never** push to `main`, merge a pull request, create or push tags, or create releases (patch releases
+  are made automatically after merges; see "Releases" in CONTRIBUTING.md).
 - **Never** edit `app/version.json`, `fastlane/metadata/android/en-US/changelogs/`, `.github/workflows/`,
   `fdroid/`, `LICENSE`, or the signing plugin (`app/plugins/withReleaseSigning.js`). Releases and the build
   pipeline are for human maintainers.
