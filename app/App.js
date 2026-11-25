@@ -9,6 +9,7 @@ import { Celebration } from './src/components/Badges';
 import * as SystemUI from 'expo-system-ui';
 import { setupNotifications, rescheduleAll, addResponseListener } from './src/lib/notifications';
 import { fastHoursFor } from './src/lib/fasting';
+import { pagerTarget, pagerNeedsAlign } from './src/lib/pager';
 import { useHealthConnectSync } from './src/state/hcSync';
 import TodayScreen from './src/screens/TodayScreen';
 import NutritionScreen from './src/screens/NutritionScreen';
@@ -66,6 +67,9 @@ function ShellInner({ index, setIndex, pages, setPages }) {
   useHealthConnectSync(state, dispatch, ready && state.profile.onboarded);
   const pager = useRef(null);
   const [visited, setVisited] = useState({ 0: true });
+  // Where the pager really is and how wide its content has been laid out, as reported by the ScrollView.
+  const pagerOffset = useRef(0);
+  const contentWidth = useRef(0);
   // Settings → "Open the app on": the page shown at launch, and where Back returns to.
   const home = indexOf(state.profile.startPage || 'today');
   const startedOn = useRef(false);
@@ -78,6 +82,16 @@ function ShellInner({ index, setIndex, pages, setPages }) {
     },
     [setIndex, width]
   );
+
+  // A scroll sent before the pager's content is measured is clamped to page 0, which is how the
+  // start page ended up showing Today while the bar already highlighted the chosen tab. Re-align
+  // whenever the content is laid out or grows, unless the pager is already on the shown page.
+  const align = useCallback(() => {
+    if (!pager.current) return;
+    if (pagerNeedsAlign(index, width, contentWidth.current, pagerOffset.current)) {
+      pager.current.scrollTo({ x: pagerTarget(index, width), animated: false });
+    }
+  }, [index, width]);
 
   // goTo('water'), goTo('nutrition'), goTo('food', { day: '2026-11-10' }), goTo('social', { sub: 'notes' }) ...
   const goTo = useCallback(
@@ -189,6 +203,13 @@ function ShellInner({ index, setIndex, pages, setPages }) {
         keyboardShouldPersistTaps="handled"
         onLayout={() => {
           if (pager.current) pager.current.scrollTo({ x: index * width, animated: false });
+        }}
+        onScroll={(e) => {
+          pagerOffset.current = e.nativeEvent.contentOffset.x;
+        }}
+        onContentSizeChange={(w) => {
+          contentWidth.current = w;
+          align();
         }}
         onMomentumScrollEnd={(e) => {
           const i = Math.round(e.nativeEvent.contentOffset.x / width);
