@@ -1,0 +1,1 @@
+Fixed: the start page setting now opens the page you picked, not Today.
