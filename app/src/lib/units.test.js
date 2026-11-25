@@ -107,7 +107,7 @@ test('heightFeetInches rounds to whole inches', () => {
   expect(heightFeetInches(180)).toEqual({ ft: 5, inch: 11 }); // 180 cm is 5 ft 10.9 in
   expect(heightFeetInches(170)).toEqual({ ft: 5, inch: 7 });
   expect(heightFeetInches(11.4)).toEqual({ ft: 0, inch: 4 });
-  expect(heightFeetInches(60.96)).toEqual({ ft: 2, inch: 0 }); // 24 in does not roll up to 3 ft
+  expect(heightFeetInches(60.96)).toEqual({ ft: 2, inch: 0 }); // exactly 24 in is 2 ft 0 in
   expect(heightFeetInches(0)).toEqual({ ft: 0, inch: 0 });
   expect(heightFeetInches('180')).toEqual({ ft: 5, inch: 11 });
   expect(heightFeetInches(-180)).toEqual({ ft: -6, inch: -11 });
