@@ -29,6 +29,7 @@ import { hcStatus, hcConnect, hcGranted, hcOpenSettings } from '../lib/healthCon
 import { syncHealthConnect } from '../state/hcSync';
 import ExerciseGoalEditor from '../components/ExerciseGoalEditor';
 import { WEEKDAYS, weighInDay, isWeeklyWeighIn } from '../lib/weighIn';
+import { changelogEntries, versionName } from '../lib/changelog';
 
 // `parent`: pages nested inside another page (back goes there, not to the menu);
 // they don't show in the menu.
@@ -39,6 +40,7 @@ const SECTIONS = [
   { key: 'trackers', icon: '🩺', label: 'Health trackers', desc: 'Optional: medications, and charts for blood pressure, blood sugar or anything you measure' },
   { key: 'reminders', icon: '🔔', label: 'Notifications and reminders', desc: 'Every reminder, plus chat notifications' },
   { key: 'app', icon: '📱', label: 'App settings', desc: 'Appearance, default page, units, cloud sync, Health Connect and your data' },
+  { key: 'changes', icon: '📝', label: "What's new", desc: 'What changed in each version' },
   { key: 'sync', icon: '☁️', label: 'Cloud sync', parent: 'app' },
   { key: 'health', icon: '📲', label: 'Health Connect', parent: 'app' },
 ];
@@ -53,7 +55,7 @@ export default function SettingsScreen({ sub, goTo }) {
   const t = useTheme();
   const section = SECTIONS.find((s) => s.key === sub);
   if (!section) return <Menu goTo={goTo} />;
-  const Page = { profile: ProfilePage, training: TrainingPage, nutrition: NutritionPage, health: HealthConnectPage, sync: CloudSyncPage, reminders: RemindersPage, app: AppPage, trackers: HealthSettingsPage }[section.key];
+  const Page = { profile: ProfilePage, training: TrainingPage, nutrition: NutritionPage, health: HealthConnectPage, sync: CloudSyncPage, reminders: RemindersPage, app: AppPage, trackers: HealthSettingsPage, changes: ChangesPage }[section.key];
   const parent = section.parent && SECTIONS.find((s) => s.key === section.parent);
   return (
     <Screen>
@@ -103,12 +105,40 @@ function Menu({ goTo }) {
         ))}
       </Card>
       <InviteCard />
-      <Txt faint size={12} center style={{ marginTop: 6 }}>
-        FossFitness v{Constants.expoConfig?.version || '2'}
-        {Constants.expoConfig?.android?.versionCode ? ` (build ${Constants.expoConfig.android.versionCode})` : ''}
-        {'\n'}Estimates are for general wellness, not medical advice.
-      </Txt>
+      <Pressable onPress={() => goTo('settings', { sub: 'changes' })} hitSlop={8}>
+        <Txt faint size={12} center style={{ marginTop: 6 }}>
+          FossFitness v{Constants.expoConfig?.version || '2'}
+          {Constants.expoConfig?.android?.versionCode ? ` (build ${Constants.expoConfig.android.versionCode})` : ''}
+          {'\n'}Estimates are for general wellness, not medical advice.
+        </Txt>
+      </Pressable>
     </Screen>
+  );
+}
+
+// What's new: the release notes built into this version (see lib/changelog.js), newest first.
+function ChangesPage() {
+  const t = useTheme();
+  const extra = Constants.expoConfig?.extra || {};
+  const entries = changelogEntries(extra.changelog, extra.releaseCode);
+  return (
+    <>
+      {extra.releaseCode ? <Txt dim style={{ marginBottom: 10, paddingHorizontal: 4 }}>You have version {versionName(extra.releaseCode)}.</Txt> : null}
+      {entries.length === 0 && <Card><Txt dim>No release notes in this build.</Txt></Card>}
+      {entries.map((e) => (
+        <Card
+          key={e.versionCode}
+          title={`Version ${e.version}`}
+          right={e.installed ? (
+            <View style={{ backgroundColor: t.primary, borderRadius: 10, paddingHorizontal: 8, paddingVertical: 2 }}>
+              <Txt size={12} weight="700" color={t.primaryText}>Installed</Txt>
+            </View>
+          ) : null}
+        >
+          <Txt dim selectable>{e.text}</Txt>
+        </Card>
+      ))}
+    </>
   );
 }
 

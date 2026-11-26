@@ -13,6 +13,21 @@ const legacy = appId === 'com.merlinlcb.healthtracker';
 // The HealthHub server (github.com/merlinlcb/HealthHub) suggested at sign-in. Set at build time;
 // empty means people type their server's address. Signed-in phones always use the server they signed in to.
 const defaultServer = (process.env.HT_DEFAULT_SERVER || '').trim().replace(/\/+$/, '');
+// Release notes for Settings → What's new: the same per-version files F-Droid shows (<versionCode>.txt).
+// A missing or unreadable folder just means no notes; it never fails the build.
+function readChangelog() {
+  const fs = require('fs');
+  const path = require('path');
+  const dir = path.join(path.dirname(require.resolve('./version.json')), '../fastlane/metadata/android/en-US/changelogs');
+  try {
+    return fs.readdirSync(dir).filter((f) => /^\d+\.txt$/.test(f)).map((f) => ({
+      versionCode: parseInt(f, 10),
+      text: fs.readFileSync(path.join(dir, f), 'utf8'),
+    }));
+  } catch {
+    return [];
+  }
+}
 
 module.exports = {
   expo: {
@@ -61,7 +76,7 @@ module.exports = {
         'com.google.android.c2dm.permission.RECEIVE',
       ],
     },
-    extra: { defaultServer, distribution, inAppUpdates: distribution !== 'fdroid' },
+    extra: { defaultServer, distribution, inAppUpdates: distribution !== 'fdroid', releaseCode: release.versionCode, changelog: readChangelog() },
     plugins: [
       [
         'expo-notifications',
