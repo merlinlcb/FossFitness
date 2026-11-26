@@ -406,6 +406,8 @@ To hold a release back, close that pull request. Changes that are only tests or 
 Either way, CI checks the tag matches `version.json`, builds and signs the APK, runs the on-device test, and
 publishes a GitHub Release with `FossFitness.apk`.
 
+The changelog files are also shown in the app under Settings → What's new, so write them for app users.
+
 The release signing key is held by the maintainer and lives only in the repository's CI secrets. Forks and pull
 requests build with a debug key. The F-Droid build is signed by F-Droid.
 
