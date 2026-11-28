@@ -1,0 +1,20 @@
+// Ubuntu Touch build: local notifications are not wired up yet, so every call is a harmless no-op.
+const noop = async () => {};
+const sub = { remove() {} };
+export const AndroidImportance = { DEFAULT: 3, HIGH: 4, LOW: 2, MAX: 5, MIN: 1 };
+export const SchedulableTriggerInputTypes = { DAILY: 'daily', WEEKLY: 'weekly', DATE: 'date', TIME_INTERVAL: 'timeInterval', CALENDAR: 'calendar' };
+export const setNotificationHandler = () => {};
+export const setNotificationChannelAsync = noop;
+export const setNotificationCategoryAsync = noop;
+export const getPermissionsAsync = async () => ({ granted: false, status: 'denied', canAskAgain: false });
+export const requestPermissionsAsync = getPermissionsAsync;
+export const scheduleNotificationAsync = async () => '';
+export const cancelScheduledNotificationAsync = noop;
+export const cancelAllScheduledNotificationsAsync = noop;
+export const getAllScheduledNotificationsAsync = async () => [];
+export const dismissAllNotificationsAsync = noop;
+export const presentNotificationAsync = async () => '';
+export const addNotificationReceivedListener = () => sub;
+export const addNotificationResponseReceivedListener = () => sub;
+export const getLastNotificationResponseAsync = async () => null;
+export const setBadgeCountAsync = noop;

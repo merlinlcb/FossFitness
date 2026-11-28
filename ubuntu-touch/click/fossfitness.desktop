@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=FossFitness
+Comment=Food, water, workouts, fasting and weight, played as a game with friends
+Exec=qmlscene %u qml/Main.qml
+Icon=assets/icon.png
+Terminal=false
+Type=Application
+X-Lomiri-Touch=true
+X-Lomiri-Default-Department-ID=lifestyle
