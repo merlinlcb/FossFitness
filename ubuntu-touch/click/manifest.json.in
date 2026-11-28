@@ -1,0 +1,15 @@
+{
+    "name": "fossfitness.merlinlcb",
+    "title": "FossFitness",
+    "description": "Food, water, workouts, fasting and weight in one place, turned into a game you play with friends.",
+    "version": "@VERSION@",
+    "maintainer": "FossFitness contributors <5841146+merlinlcb@users.noreply.github.com>",
+    "architecture": "all",
+    "framework": "ubuntu-touch-24.04-1.x-qml",
+    "hooks": {
+        "fossfitness": {
+            "apparmor": "fossfitness.apparmor",
+            "desktop": "fossfitness.desktop"
+        }
+    }
+}
